@@ -1,4 +1,4 @@
-# audiofeed
+# Audiofeed
 
 ## Installation
 - Create folder "audio"
