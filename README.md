@@ -11,3 +11,7 @@
 - Copy URL of any book
 - Put the url into Podcasts App
 - Enjoy
+
+
+## ToDo
+- Illustrate in screenshots the directory tree and the result on iPhone
