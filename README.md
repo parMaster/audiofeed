@@ -1,5 +1,8 @@
 # Audiofeed
 
+## Demo
+- Visit http://audiofeed_demo.cdns.com.ua/index/ to check out the demo instance of the service with a couple of public-domain audiobooks
+
 ## Installation
 - Create folder "audio"
 - Put some audiobooks - each in separate folder
