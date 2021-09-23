@@ -51,7 +51,7 @@ func title(w http.ResponseWriter, r *http.Request) {
 
 		if !entry.IsDir() {
 
-			var isChapter = regexp.MustCompile(`(?im)\.(mp3|m4a)$`)
+			var isChapter = regexp.MustCompile(`(?im)\.(mp3|m4a|m4b)$`)
 			if isChapter.MatchString(path) {
 				log.Println("visited: ", path)
 
