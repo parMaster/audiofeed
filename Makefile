@@ -1,6 +1,6 @@
 .PHONY: build
 build: 
-	go build -v ./main.go
+	go build -v
 
 .PHONY: buildstage
 buildstage: 
