@@ -28,6 +28,13 @@ func index(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(html))
 }
 
+func info(w http.ResponseWriter, r *http.Request) {
+
+	html := fmt.Sprintf("%v", r)
+
+	w.Write([]byte(html))
+}
+
 func title(w http.ResponseWriter, r *http.Request) {
 
 	rw := NewResponse()
@@ -92,6 +99,7 @@ func title(w http.ResponseWriter, r *http.Request) {
 func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/index", index).Methods("GET")
+	r.HandleFunc("/info", info).Methods("GET")
 	r.HandleFunc("/title/{name}", title).Methods("GET")
 
 	http.Handle("/", r)
