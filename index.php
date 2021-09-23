@@ -21,7 +21,7 @@ if ($routeParts[0]) {
 	$folder = $routeParts[0];
 	if (file_exists(DIR_AUDIO.$folder) && is_dir(DIR_AUDIO.$folder)) {
 
-		$files = (glob(DIR_AUDIO.$folder.'/*.mp3'));
+		$files = (glob(DIR_AUDIO.$folder.'/*.{mp3,m4b,mp4}', GLOB_BRACE));
 
 		if ($images = glob(DIR_AUDIO.$folder.'/*.{jpg,jpeg,png}', GLOB_BRACE)) {
 			$images = explode('/', $images[0]);
