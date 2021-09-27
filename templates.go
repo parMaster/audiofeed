@@ -1,6 +1,7 @@
 package main
 
 const xmlTemplateBody = `<?xml version="1.0" ?><rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:media="http://search.yahoo.com/mrss/" xmlns:creativeCommons="http://backend.userland.com/creativeCommonsRssModule" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+	<?xml-stylesheet href="/title.xsl" type="text/xsl"?>
 	<channel>
 		<title><![CDATA[{{.TitleName}}]]></title>
 		<link><![CDATA[{{.TitleURL}}]]></link>
