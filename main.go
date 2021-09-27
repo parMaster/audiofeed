@@ -12,14 +12,16 @@ import (
 	"github.com/gorilla/mux"
 )
 
+const AudioFolder string = "audio"
+
 func index(w http.ResponseWriter, r *http.Request) {
 
-	// move to config
-	eTitles, err := filepath.Glob("./audio/*")
+	eTitles, err := filepath.Glob("./" + AudioFolder + "/*")
 	if err != nil {
 		panic(err.Error())
 	}
 
+	// ToDo: use html template
 	html := ""
 	for _, t := range eTitles {
 		title := filepath.Base(t)
@@ -28,22 +30,36 @@ func index(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(html))
 }
 
+func info(w http.ResponseWriter, r *http.Request) {
+
+	html := fmt.Sprintf("%v", r)
+
+	w.Write([]byte(html))
+}
+
+type feed struct {
+	TitleName   string
+	TitleURL    string
+	CoverURL    string
+	ChapterURLs []string
+}
+
 func title(w http.ResponseWriter, r *http.Request) {
 
 	rw := NewResponse()
-
-	chapterTemplate := template.New("Chapter")
-	chapterTemplate.Parse(chapterTemplateBody)
+	var Feed feed
 
 	xmlTemplate := template.New("Title with chapters")
 	xmlTemplate.Parse(xmlTemplateBody)
 
 	params := mux.Vars(r)
-	titleName := params["name"]
-	titleURL := "http://" + r.Host + "/title/" + titleName // fix
+	Feed.TitleName = params["name"]
+	Feed.TitleURL = "http://" + r.Host + "/title/" + Feed.TitleName
 
-	// move to config
-	err := filepath.WalkDir("./audio/"+titleName+"/", func(path string, entry fs.DirEntry, err error) error {
+	var isChapter = regexp.MustCompile(`(?im)\.(mp3|m4a|m4b)$`)
+	var isCover = regexp.MustCompile(`(?im)\.(jpg|jpeg|png)$`)
+
+	err := filepath.WalkDir("./"+AudioFolder+"/"+Feed.TitleName+"/", func(path string, entry fs.DirEntry, err error) error {
 
 		if err != nil {
 			return err
@@ -51,33 +67,22 @@ func title(w http.ResponseWriter, r *http.Request) {
 
 		if !entry.IsDir() {
 
-			var isChapter = regexp.MustCompile(`(?im)\.(mp3|m4a)$`)
 			if isChapter.MatchString(path) {
+
+				Feed.ChapterURLs = append(Feed.ChapterURLs, "http://"+r.Host+"/"+path)
 				log.Println("visited: ", path)
 
-				chapterTemplate.Execute(rw, map[string]string{
-					"ChapterURL": "http://" + r.Host + "/" + path, // move to config
-					"TitleURL":   titleURL,
-				})
-			}
+			} else if isCover.MatchString(path) {
 
-			var isCover = regexp.MustCompile(`(?im)\.(jpg|jpeg|png)$`)
-			if isCover.MatchString(path) {
-				cover := path
-				log.Println("cover found: ", cover)
+				Feed.CoverURL = "http://" + r.Host + "/" + path
+				log.Println("cover found: ", Feed.CoverURL)
 			}
 		}
 
 		return nil
 	})
-	chapters := rw.body
-	rw.Clear()
 
-	xmlTemplate.Execute(rw, map[string]string{
-		"Chapters":  chapters,
-		"TitleURL":  titleURL,
-		"TitleName": titleName,
-	})
+	xmlTemplate.Execute(rw, Feed)
 
 	if err != nil {
 		log.Fatal("error walking audio path: \n", err)
@@ -92,6 +97,7 @@ func title(w http.ResponseWriter, r *http.Request) {
 func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/index", index).Methods("GET")
+	r.HandleFunc("/info", info).Methods("GET")
 	r.HandleFunc("/title/{name}", title).Methods("GET")
 
 	http.Handle("/", r)
