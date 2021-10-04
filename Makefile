@@ -2,8 +2,8 @@
 build: 
 	go build -v
 
-.PHONY: buildstage
-buildstage: 
+.PHONY: stage
+stage: 
 	rm ./audiofeed
 	go build -v 
 	cp ./audiofeed /var/www/af.cdns.com.ua/
