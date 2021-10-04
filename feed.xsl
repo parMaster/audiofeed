@@ -4,48 +4,46 @@
     <xsl:template match="/">
         <html xmlns="http://www.w3.org/1999/xhtml">
             <head>
-                <title><xsl:value-of select="/rss/channel/title"/> RSS Feed</title>
+                <title><xsl:value-of select="/rss/channel/title"/> Audiobook</title>
                 <meta charset="UTF-8" />
                 <meta http-equiv="x-ua-compatible" content="IE=edge,chrome=1" />
                 <meta name="viewport" content="width=device-width,minimum-scale=1,initial-scale=1,shrink-to-fit=no" />
                 <style type="text/css">
-                    /* Your custom styles can go here! */
+                    a, a:visited {
+                        text-color: #08c;
+                    }
                 </style>
             </head>
             <body>
                 <header>
-                    <h1>RSS Feed</h1>
-                    <h2>
+                    <h1>
                         <xsl:value-of select="/rss/channel/title"/>
-                    </h2>
+                    </h1>
+                    <h2>Audiobook</h2>
                     <p>
                         <xsl:value-of select="/rss/channel/description"/>
                     </p>
-                    <a hreflang="en" target="_blank">
+                    Put this link into your podcast app: <a hreflang="en" target="_blank">
                         <xsl:attribute name="href">
                             <xsl:value-of select="/rss/channel/link"/>
                         </xsl:attribute>
-                        Visit Website &#x2192;
+                        <b><xsl:value-of select="/rss/channel/link"/></b>
+                        <p><i>Powered by <a href="https://github.com/parMaster/audiofeed">Audiofeed@GitHub</a></i></p>
                     </a>
                 </header>
                 <main>
-                    <h2>Recent Posts</h2>
+                    <h2>Chapters</h2>
                     <xsl:for-each select="/rss/channel/item">
                         <article>
                             <h3>
+                            <xsl:value-of select="itunes:episode"/>. 
                                 <a hreflang="en" target="_blank">
                                     <xsl:attribute name="href">
-                                        <xsl:value-of select="link"/>
+                                        <xsl:value-of select="enclosure/@url" />
                                     </xsl:attribute>
-                                    <xsl:value-of select="title"/>
+                                    <xsl:value-of select="enclosure/@url" />
                                 </a>
                             </h3>
-                            <footer>
-                                Published:
-                                <time>
-                                    <xsl:value-of select="pubDate" />
-                                </time>
-                            </footer>
                         </article>
                     </xsl:for-each>
                 </main>

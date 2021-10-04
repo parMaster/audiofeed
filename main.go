@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"regexp"
 	"text/template"
@@ -15,26 +16,22 @@ import (
 const AudioFolder string = "audio"
 
 func index(w http.ResponseWriter, r *http.Request) {
+	rw := NewResponse()
+	var titles []string
+
+	titlesTemplate := template.New("Title with chapters")
+	titlesTemplate.Parse(titlesTemplateBody)
 
 	eTitles, err := filepath.Glob("./" + AudioFolder + "/*")
-	if err != nil {
-		panic(err.Error())
-	}
+	check(err)
 
-	// ToDo: use html template
-	html := ""
 	for _, t := range eTitles {
 		title := filepath.Base(t)
-		html += fmt.Sprintf("<a href=\"/title/%v\">%v</a><br>\n", title, title)
+		titles = append(titles, title)
 	}
-	w.Write([]byte(html))
-}
 
-func info(w http.ResponseWriter, r *http.Request) {
-
-	html := fmt.Sprintf("%v", r)
-
-	w.Write([]byte(html))
+	titlesTemplate.Execute(rw, titles)
+	w.Write([]byte(rw.body))
 }
 
 type feed struct {
@@ -61,9 +58,7 @@ func title(w http.ResponseWriter, r *http.Request) {
 
 	err := filepath.WalkDir("./"+AudioFolder+"/"+Feed.TitleName+"/", func(path string, entry fs.DirEntry, err error) error {
 
-		if err != nil {
-			return err
-		}
+		check(err)
 
 		if !entry.IsDir() {
 
@@ -90,21 +85,37 @@ func title(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Add("Content-Type", "application/rss+xml; charset=utf-8")
+	w.Header().Add("Content-Type", "text/xml; charset=utf-8")
 	w.Write([]byte(rw.body))
+}
+
+func info(w http.ResponseWriter, r *http.Request) {
+	b := fmt.Sprintf("%v", r)
+	w.Write([]byte(b))
+}
+
+func stylesheet(w http.ResponseWriter, r *http.Request) {
+	b, err := os.ReadFile("./feed.xsl")
+	check(err)
+	w.Write([]byte(b))
+}
+
+func check(e error) {
+	if e != nil {
+		panic(e)
+	}
 }
 
 func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/index", index).Methods("GET")
 	r.HandleFunc("/info", info).Methods("GET")
+	r.HandleFunc("/feed.xsl", stylesheet).Methods("GET")
 	r.HandleFunc("/title/{name}", title).Methods("GET")
 
 	http.Handle("/", r)
 
 	log.Println("Listening...")
 	err := http.ListenAndServe(":8080", nil)
-	if err != nil {
-		panic(err.Error())
-	}
+	check(err)
 }

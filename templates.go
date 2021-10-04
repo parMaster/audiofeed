@@ -1,7 +1,8 @@
 package main
 
-const xmlTemplateBody = `<?xml version="1.0" ?><rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:media="http://search.yahoo.com/mrss/" xmlns:creativeCommons="http://backend.userland.com/creativeCommonsRssModule" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
-	<?xml-stylesheet href="/audio/title.xsl" type="text/xsl"?>
+const xmlTemplateBody = `<?xml version="1.0" ?>
+<?xml-stylesheet href="/feed.xsl" type="text/xsl"?>
+<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:media="http://search.yahoo.com/mrss/" xmlns:creativeCommons="http://backend.userland.com/creativeCommonsRssModule" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
 	<channel>
 		<title><![CDATA[{{.TitleName}}]]></title>
 		<link><![CDATA[{{.TitleURL}}]]></link>
@@ -41,3 +42,13 @@ const xmlTemplateBody = `<?xml version="1.0" ?><rss xmlns:itunes="http://www.itu
 
 	</channel>
 </rss>`
+
+const titlesTemplateBody = `<html>
+<body>
+<h2>Audiobook feed</h3>
+<h3>Titles available:</h4>
+{{ range $k, $v := . }}
+<li><a href="/title/{{$v}}">{{$v}}</a></li>
+{{ end }} 
+</body>
+</html>`
