@@ -1,5 +1,10 @@
 # Audiofeed
 
+## ToDo
+- Description about Golang version
+- Golang binary installation manual
+- Illustrate in screenshots the directory tree and the result on iPhone
+
 ## Demo
 - Visit http://audiofeed_demo.cdns.com.ua/index/ to check out the demo instance of the service with a couple of public-domain audiobooks
 
@@ -16,5 +21,3 @@
 - Enjoy
 
 
-## ToDo
-- Illustrate in screenshots the directory tree and the result on iPhone
