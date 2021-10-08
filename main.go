@@ -114,6 +114,7 @@ func main() {
 	r.HandleFunc("/title/{name}", title).Methods("GET")
 
 	http.Handle("/", r)
+	http.Handle("/audio/", http.StripPrefix("/audio/", http.FileServer(http.Dir("./audio"))))
 
 	log.Println("Listening...")
 	err := http.ListenAndServe(":8080", nil)

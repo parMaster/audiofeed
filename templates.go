@@ -19,6 +19,7 @@ const xmlTemplateBody = `<?xml version="1.0" ?>
 
 		{{if .CoverURL}}
 		<itunes:image href="{{.CoverURL}}" />
+		<media:thumbnail url="{{.CoverURL}}" />
 		<image>
 			<title>{{.TitleName}}</title>
 			<url>{{.CoverURL}}</url>
