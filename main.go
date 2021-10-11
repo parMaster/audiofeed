@@ -43,6 +43,7 @@ type feed struct {
 	MediaFolder string
 	TitlePath   string
 	CoverPath   string
+	ServerPort  string
 	Chapters    []string
 }
 
@@ -108,15 +109,10 @@ func check(e error) {
 	}
 }
 
-func getMediaFolderCmd(folder string) string {
-	if folder != "" {
-		return folder
-	} else {
-		var cmdFolder string
-		flag.StringVar(&cmdFolder, "folder", "audio", "Name of a folder with media")
-		flag.Parse()
-		return cmdFolder
-	}
+func (Feed *feed) initCmdParams() {
+	flag.StringVar(&Feed.ServerPort, "port", "8080", "Server port")
+	flag.StringVar(&Feed.MediaFolder, "folder", "audio", "Name of a folder with media")
+	flag.Parse()
 }
 
 func main() {
@@ -128,12 +124,12 @@ func main() {
 	r.HandleFunc("/feed.xsl", stylesheet).Methods("GET")
 	r.HandleFunc("/title/{name}", Feed.title).Methods("GET")
 
-	Feed.MediaFolder = getMediaFolderCmd("")
+	Feed.initCmdParams()
 
 	http.Handle("/", r)
 	http.Handle("/"+Feed.MediaFolder+"/", http.StripPrefix("/"+Feed.MediaFolder+"/", http.FileServer(http.Dir("./"+Feed.MediaFolder))))
 
 	log.Println("Listening...")
-	err := http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe(":"+Feed.ServerPort, nil)
 	check(err)
 }
