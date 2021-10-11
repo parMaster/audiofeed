@@ -109,7 +109,7 @@ func check(e error) {
 	}
 }
 
-func (Feed *feed) initCmdParams() {
+func (Feed *feed) readCmdParams() {
 	flag.StringVar(&Feed.ServerPort, "port", "8080", "Server port")
 	flag.StringVar(&Feed.MediaFolder, "folder", "audio", "Name of a folder with media")
 	flag.Parse()
@@ -124,7 +124,7 @@ func main() {
 	r.HandleFunc("/feed.xsl", stylesheet).Methods("GET")
 	r.HandleFunc("/title/{name}", Feed.title).Methods("GET")
 
-	Feed.initCmdParams()
+	Feed.readCmdParams()
 
 	http.Handle("/", r)
 	http.Handle("/"+Feed.MediaFolder+"/", http.StripPrefix("/"+Feed.MediaFolder+"/", http.FileServer(http.Dir("./"+Feed.MediaFolder))))
