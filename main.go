@@ -39,13 +39,25 @@ func (Feed *feed) index(w http.ResponseWriter, r *http.Request) {
 
 type feed struct {
 	HostName    string
-	TitleName   string
 	MediaFolder string
+	ServerPort  string
+	TitleName   string
 	TitlePath   string
 	CoverPath   string
-	ServerPort  string
 	Chapters    []string
 }
+
+// type feedServer struct {
+// 	HostName    string
+// 	MediaFolder string
+// 	ServerPort  string
+// }
+
+// type feed struct {
+// 	TitleName   string
+// 	TitlePath   string
+// 	CoverPath   string
+// }
 
 func (Feed *feed) readTitle() {
 
