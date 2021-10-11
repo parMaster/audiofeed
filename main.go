@@ -14,10 +14,10 @@ import (
 )
 
 func (Feed *feed) readMediaFolder() []string {
+	var titles []string
+
 	eTitles, err := filepath.Glob("./" + Feed.MediaFolder + "/*")
 	check(err)
-
-	var titles []string
 
 	for _, t := range eTitles {
 		title := filepath.Base(t)
@@ -51,31 +51,23 @@ func (Feed *feed) readTitle() {
 	var isCover = regexp.MustCompile(`(?im)\.(jpg|jpeg|png)$`)
 
 	var chapters []string
-
 	err := filepath.WalkDir("./"+Feed.MediaFolder+"/"+Feed.TitleName+"/", func(path string, entry fs.DirEntry, err error) error {
-
 		check(err)
 
 		if !entry.IsDir() {
-
 			if isChapter.MatchString(path) {
-
 				chapters = append(chapters, path)
 				log.Println("visited: ", path)
-
 			} else if isCover.MatchString(path) {
-
 				Feed.CoverPath = path
 				log.Println("cover found: ", Feed.CoverPath)
 			}
 		}
-
 		return nil
 	})
+	check(err)
 
 	Feed.Chapters = chapters
-
-	check(err)
 }
 
 func (Feed *feed) title(w http.ResponseWriter, r *http.Request) {
@@ -116,7 +108,6 @@ func check(e error) {
 }
 
 func main() {
-
 	var Feed feed
 	Feed.MediaFolder = "audio"
 
