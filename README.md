@@ -20,4 +20,7 @@
 - Put the url into Podcasts App
 - Enjoy
 
-
+## Ubuntu autorun crontab line
+`
+@reboot cd /var/www/audiofeed_demo && ./audiofeed
+`
