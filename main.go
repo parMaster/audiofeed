@@ -13,50 +13,46 @@ import (
 	"github.com/gorilla/mux"
 )
 
-const AudioFolder string = "audio"
-
-func index(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponse()
-	var titles []string
-
-	titlesTemplate := template.New("Title with chapters")
-	titlesTemplate.Parse(titlesTemplateBody)
-
-	eTitles, err := filepath.Glob("./" + AudioFolder + "/*")
+func (Feed *feed) readMediaFolder() []string {
+	eTitles, err := filepath.Glob("./" + Feed.MediaFolder + "/*")
 	check(err)
+
+	var titles []string
 
 	for _, t := range eTitles {
 		title := filepath.Base(t)
 		titles = append(titles, title)
 	}
+	return titles
+}
 
-	titlesTemplate.Execute(rw, titles)
+func (Feed *feed) index(w http.ResponseWriter, r *http.Request) {
+	rw := NewResponse()
+
+	titlesTemplate := template.New("Title with chapters")
+	titlesTemplate.Parse(titlesTemplateBody)
+
+	titlesTemplate.Execute(rw, Feed.readMediaFolder())
 	w.Write([]byte(rw.body))
 }
 
 type feed struct {
+	HostName    string
 	TitleName   string
-	TitleURL    string
-	CoverURL    string
-	ChapterURLs []string
+	MediaFolder string
+	TitlePath   string
+	CoverPath   string
+	Chapters    []string
 }
 
-func title(w http.ResponseWriter, r *http.Request) {
-
-	rw := NewResponse()
-	var Feed feed
-
-	xmlTemplate := template.New("Title with chapters")
-	xmlTemplate.Parse(xmlTemplateBody)
-
-	params := mux.Vars(r)
-	Feed.TitleName = params["name"]
-	Feed.TitleURL = "http://" + r.Host + "/title/" + Feed.TitleName
+func (Feed *feed) readTitle() {
 
 	var isChapter = regexp.MustCompile(`(?im)\.(mp3|m4a|m4b)$`)
 	var isCover = regexp.MustCompile(`(?im)\.(jpg|jpeg|png)$`)
 
-	err := filepath.WalkDir("./"+AudioFolder+"/"+Feed.TitleName+"/", func(path string, entry fs.DirEntry, err error) error {
+	var chapters []string
+
+	err := filepath.WalkDir("./"+Feed.MediaFolder+"/"+Feed.TitleName+"/", func(path string, entry fs.DirEntry, err error) error {
 
 		check(err)
 
@@ -64,26 +60,39 @@ func title(w http.ResponseWriter, r *http.Request) {
 
 			if isChapter.MatchString(path) {
 
-				Feed.ChapterURLs = append(Feed.ChapterURLs, "http://"+r.Host+"/"+path)
+				chapters = append(chapters, path)
 				log.Println("visited: ", path)
 
 			} else if isCover.MatchString(path) {
 
-				Feed.CoverURL = "http://" + r.Host + "/" + path
-				log.Println("cover found: ", Feed.CoverURL)
+				Feed.CoverPath = path
+				log.Println("cover found: ", Feed.CoverPath)
 			}
 		}
 
 		return nil
 	})
 
-	xmlTemplate.Execute(rw, Feed)
+	Feed.Chapters = chapters
 
-	if err != nil {
-		log.Fatal("error walking audio path: \n", err)
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
+	check(err)
+}
+
+func (Feed *feed) title(w http.ResponseWriter, r *http.Request) {
+
+	rw := NewResponse()
+
+	xmlTemplate := template.New("Title with chapters")
+	xmlTemplate.Parse(xmlTemplateBody)
+
+	params := mux.Vars(r)
+	Feed.TitleName = params["name"]
+	Feed.HostName = r.Host
+	Feed.TitlePath = "/title/" + Feed.TitleName
+
+	Feed.readTitle()
+
+	xmlTemplate.Execute(rw, Feed)
 
 	w.Header().Add("Content-Type", "text/xml; charset=utf-8")
 	w.Write([]byte(rw.body))
@@ -107,14 +116,18 @@ func check(e error) {
 }
 
 func main() {
+
+	var Feed feed
+	Feed.MediaFolder = "audio"
+
 	r := mux.NewRouter()
-	r.HandleFunc("/index", index).Methods("GET")
+	r.HandleFunc("/index", Feed.index).Methods("GET")
 	r.HandleFunc("/info", info).Methods("GET")
 	r.HandleFunc("/feed.xsl", stylesheet).Methods("GET")
-	r.HandleFunc("/title/{name}", title).Methods("GET")
+	r.HandleFunc("/title/{name}", Feed.title).Methods("GET")
 
 	http.Handle("/", r)
-	http.Handle("/audio/", http.StripPrefix("/audio/", http.FileServer(http.Dir("./audio"))))
+	http.Handle("/"+Feed.MediaFolder+"/", http.StripPrefix("/"+Feed.MediaFolder+"/", http.FileServer(http.Dir("./"+Feed.MediaFolder))))
 
 	log.Println("Listening...")
 	err := http.ListenAndServe(":8080", nil)
