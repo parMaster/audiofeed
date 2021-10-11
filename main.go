@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/fs"
 	"log"
@@ -107,15 +108,27 @@ func check(e error) {
 	}
 }
 
+func getMediaFolderCmd(folder string) string {
+	if folder != "" {
+		return folder
+	} else {
+		var cmdFolder string
+		flag.StringVar(&cmdFolder, "folder", "audio", "Name of a folder with media")
+		flag.Parse()
+		return cmdFolder
+	}
+}
+
 func main() {
 	var Feed feed
-	Feed.MediaFolder = "audio"
 
 	r := mux.NewRouter()
 	r.HandleFunc("/index", Feed.index).Methods("GET")
 	r.HandleFunc("/info", info).Methods("GET")
 	r.HandleFunc("/feed.xsl", stylesheet).Methods("GET")
 	r.HandleFunc("/title/{name}", Feed.title).Methods("GET")
+
+	Feed.MediaFolder = getMediaFolderCmd("")
 
 	http.Handle("/", r)
 	http.Handle("/"+Feed.MediaFolder+"/", http.StripPrefix("/"+Feed.MediaFolder+"/", http.FileServer(http.Dir("./"+Feed.MediaFolder))))
