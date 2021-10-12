@@ -54,7 +54,7 @@ func (FeedServer *feedServer) title(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	FeedServer.HostName = r.Host
 	FeedServer.Title.Name = params["name"]
-	FeedServer.Title.Path = filepath.Join("title", FeedServer.Title.Name)
+	FeedServer.Title.Path = filepath.ToSlash(filepath.Join("title", FeedServer.Title.Name))
 
 	FeedServer.Title.readTitle(filepath.Join(FeedServer.MediaFolder, FeedServer.Title.Name))
 
