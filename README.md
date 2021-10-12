@@ -1,23 +1,20 @@
 # Audiofeed
 
 ## ToDo
-- Description about Golang version
-- Golang binary installation manual
 - Illustrate in screenshots the directory tree and the result on iPhone
 
 ## Demo
-- Visit http://audiofeed_demo.cdns.com.ua/index/ to check out the demo instance of the service with a couple of public-domain audiobooks
+To build a demo app, simply run
 
-## Installation
-- Create folder "audio"
-- Put some audiobooks - each in separate folder
-- edit config.php - HTTP_ADDRESS is enough
-- edit .htaccess - all the books.mydomain.com entries
+`make demo`
+
+Your server will be up and running after downloading some public domain content. 
+Visit http://localhost:8080/index to see titles list
+Demo server is also available at http://audiofeed_demo.cdns.com.ua/index 
 
 ## Usage
-- Visit http://books.mydomain.com/index (go to your actual HTTP_ADDRESS)
-- Copy URL of any book
-- Put the url into Podcasts App
+- Put your audiobook folder into `audio` folder
+- Get RSS URL for your podcast app
 - Enjoy
 
 ## Ubuntu autorun crontab line
