@@ -9,7 +9,9 @@ To build a demo app, simply run
 `make demo`
 
 Your server will be up and running after downloading some public domain content. 
+
 Visit http://localhost:8080/index to see titles list
+
 Demo server is also available at http://audiofeed_demo.cdns.com.ua/index 
 
 ## Usage
