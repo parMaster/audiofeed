@@ -106,7 +106,7 @@ func (Title *title) readTitle(titlePath string) {
 
 		if !entry.IsDir() {
 			if isChapter.MatchString(path) {
-				chapters = append(chapters, path)
+				chapters = append(chapters, filepath.ToSlash(path))
 				log.Println("visited: ", path)
 			} else if isCover.MatchString(path) {
 				Title.CoverPath = path
