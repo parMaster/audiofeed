@@ -1,5 +1,6 @@
 .PHONY: build
 build: 
+	go get audiofeed
 	go build -v
 
 .PHONY: run
@@ -9,6 +10,8 @@ run:
 
 .PHONY: demo
 demo: 
+	go get audiofeed
+	go build -v
 	mkdir "audio"
 	mkdir "audio/Taras Shevchenko"
 	mkdir "audio/Taras Shevchenko/Kateryna"

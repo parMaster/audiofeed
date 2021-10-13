@@ -9,6 +9,8 @@ IF %1==run GOTO :RUN
 GOTO :END
 
 :DEMO
+go get audiofeed
+go build -v
 mkdir "audio"
 IF EXIST "audio\Taras Shevchenko" (
     ECHO Demo folders might be created already
