@@ -35,19 +35,13 @@ type title struct {
 }
 
 func (FeedServer *feedServer) index(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponse()
-
 	titlesTemplate := template.New("Title with chapters")
 	titlesTemplate.Parse(titlesTemplateBody)
 
-	titlesTemplate.Execute(rw, FeedServer.fromMediaFolder(FeedServer.MediaFolder))
-	w.Write([]byte(rw.body))
+	titlesTemplate.Execute(w, FeedServer.fromMediaFolder(FeedServer.MediaFolder))
 }
 
 func (FeedServer *feedServer) displayTitle(w http.ResponseWriter, r *http.Request) {
-
-	rw := NewResponse()
-
 	xmlTemplate := template.New("Title with chapters")
 	xmlTemplate.Parse(xmlTemplateBody)
 
@@ -58,11 +52,8 @@ func (FeedServer *feedServer) displayTitle(w http.ResponseWriter, r *http.Reques
 
 	FeedServer.readTitle(filepath.Join(FeedServer.MediaFolder, FeedServer.Name))
 
-	err := xmlTemplate.Execute(rw, FeedServer)
-	check(err)
-
 	w.Header().Add("Content-Type", "text/xml; charset=utf-8")
-	w.Write([]byte(rw.body))
+	xmlTemplate.Execute(w, FeedServer)
 }
 
 func (FeedServer *feedServer) info(w http.ResponseWriter, r *http.Request) {
@@ -71,9 +62,9 @@ func (FeedServer *feedServer) info(w http.ResponseWriter, r *http.Request) {
 }
 
 func (FeedServer *feedServer) stylesheet(w http.ResponseWriter, r *http.Request) {
-	b, err := os.ReadFile("feed.xsl")
-	check(err)
-	w.Write([]byte(b))
+	if b, err := os.ReadFile("feed.xsl"); err == nil {
+		w.Write([]byte(b))
+	}
 }
 
 func (FeedServer *feedServer) readCmdParams() {
@@ -140,7 +131,7 @@ func main() {
 	http.Handle("/", r)
 	http.Handle("/"+FeedServer.MediaFolder+"/", http.StripPrefix("/"+FeedServer.MediaFolder+"/", http.FileServer(http.Dir(FeedServer.MediaFolder))))
 
-	log.Println("Listening...")
+	log.Println("Listening :" + FeedServer.Port)
 	err := http.ListenAndServe(":"+FeedServer.Port, nil)
 	check(err)
 }
