@@ -24,7 +24,7 @@ type feedServer struct {
 	HostName    string
 	MediaFolder string
 	Port        string
-	Title       title
+	title
 }
 
 type title struct {
@@ -40,11 +40,11 @@ func (FeedServer *feedServer) index(w http.ResponseWriter, r *http.Request) {
 	titlesTemplate := template.New("Title with chapters")
 	titlesTemplate.Parse(titlesTemplateBody)
 
-	titlesTemplate.Execute(rw, FeedServer.Title.fromMediaFolder(FeedServer.MediaFolder))
+	titlesTemplate.Execute(rw, FeedServer.fromMediaFolder(FeedServer.MediaFolder))
 	w.Write([]byte(rw.body))
 }
 
-func (FeedServer *feedServer) title(w http.ResponseWriter, r *http.Request) {
+func (FeedServer *feedServer) displayTitle(w http.ResponseWriter, r *http.Request) {
 
 	rw := NewResponse()
 
@@ -53,10 +53,10 @@ func (FeedServer *feedServer) title(w http.ResponseWriter, r *http.Request) {
 
 	params := mux.Vars(r)
 	FeedServer.HostName = r.Host
-	FeedServer.Title.Name = params["name"]
-	FeedServer.Title.Path = filepath.ToSlash(filepath.Join("title", FeedServer.Title.Name))
+	FeedServer.Name = params["name"] // filter somehow?
+	FeedServer.Path = filepath.ToSlash(filepath.Join("title", FeedServer.Name))
 
-	FeedServer.Title.readTitle(filepath.Join(FeedServer.MediaFolder, FeedServer.Title.Name))
+	FeedServer.readTitle(filepath.Join(FeedServer.MediaFolder, FeedServer.Name))
 
 	err := xmlTemplate.Execute(rw, FeedServer)
 	check(err)
@@ -101,7 +101,13 @@ func (Title *title) readTitle(titlePath string) {
 	var isCover = regexp.MustCompile(`(?im)\.(jpg|jpeg|png)$`)
 
 	var chapters []string
-	err := filepath.WalkDir(titlePath, func(path string, entry fs.DirEntry, err error) error {
+
+	_, err := os.ReadDir(titlePath)
+	if err != nil {
+		return
+	}
+
+	err = filepath.WalkDir(titlePath, func(path string, entry fs.DirEntry, err error) error {
 		check(err)
 
 		if !entry.IsDir() {
@@ -127,7 +133,7 @@ func main() {
 	r.HandleFunc("/index", FeedServer.index).Methods("GET")
 	r.HandleFunc("/info", FeedServer.info).Methods("GET")
 	r.HandleFunc("/feed.xsl", FeedServer.stylesheet).Methods("GET")
-	r.HandleFunc("/title/{name}", FeedServer.title).Methods("GET")
+	r.HandleFunc("/title/{name}", FeedServer.displayTitle).Methods("GET")
 
 	FeedServer.readCmdParams()
 
