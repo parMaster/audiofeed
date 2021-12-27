@@ -9,7 +9,7 @@ Your server will be up and running after downloading some public domain content.
 
 Visit http://localhost:8080/index to see titles list
 
-Demo server is also available at http://audiofeed_demo.cdns.com.ua/index 
+Demo server is also available at http://audiofeed_demo.cdns.com.ua:8983/index 
 
 ## Usage
 - Put your audiobook folder into `audio` folder
