@@ -1,8 +1,5 @@
 # Audiofeed
 
-## ToDo
-- Illustrate in screenshots the directory tree and the result on iPhone
-
 ## Demo
 To build a demo app, simply run
 
