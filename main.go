@@ -34,46 +34,46 @@ type title struct {
 	Chapters  []string
 }
 
-func (FeedServer *feedServer) index(w http.ResponseWriter, r *http.Request) {
+func (s *feedServer) index(w http.ResponseWriter, r *http.Request) {
 	titlesTemplate := template.New("Title with chapters")
 	titlesTemplate.Parse(titlesTemplateBody)
 
-	titlesTemplate.Execute(w, FeedServer.fromMediaFolder(FeedServer.MediaFolder))
+	titlesTemplate.Execute(w, s.fromMediaFolder(s.MediaFolder))
 }
 
-func (FeedServer *feedServer) displayTitle(w http.ResponseWriter, r *http.Request) {
+func (s *feedServer) displayTitle(w http.ResponseWriter, r *http.Request) {
 	xmlTemplate := template.New("Title with chapters")
 	xmlTemplate.Parse(xmlTemplateBody)
 
 	params := mux.Vars(r)
-	FeedServer.HostName = r.Host
-	FeedServer.Name = params["name"] // filter somehow?
-	FeedServer.Path = filepath.ToSlash(filepath.Join("title", FeedServer.Name))
+	s.HostName = r.Host
+	s.Name = params["name"] // filter somehow?
+	s.Path = filepath.ToSlash(filepath.Join("title", s.Name))
 
-	FeedServer.readTitle(filepath.Join(FeedServer.MediaFolder, FeedServer.Name))
+	s.readTitle(filepath.Join(s.MediaFolder, s.Name))
 
 	w.Header().Add("Content-Type", "text/xml; charset=utf-8")
-	xmlTemplate.Execute(w, FeedServer)
+	xmlTemplate.Execute(w, s)
 }
 
-func (FeedServer *feedServer) info(w http.ResponseWriter, r *http.Request) {
+func (*feedServer) info(w http.ResponseWriter, r *http.Request) {
 	b := fmt.Sprintf("%v", r)
 	w.Write([]byte(b))
 }
 
-func (FeedServer *feedServer) stylesheet(w http.ResponseWriter, r *http.Request) {
+func (*feedServer) stylesheet(w http.ResponseWriter, r *http.Request) {
 	if b, err := os.ReadFile("feed.xsl"); err == nil {
 		w.Write([]byte(b))
 	}
 }
 
-func (FeedServer *feedServer) readCmdParams() {
-	flag.StringVar(&FeedServer.Port, "port", "8080", "Server port")
-	flag.StringVar(&FeedServer.MediaFolder, "folder", "audio", "Name of a folder with media")
+func (s *feedServer) readCmdParams() {
+	flag.StringVar(&s.Port, "port", "8080", "Server port")
+	flag.StringVar(&s.MediaFolder, "folder", "audio", "Name of a folder with media")
 	flag.Parse()
 }
 
-func (Title *title) fromMediaFolder(mediaFolder string) []string {
+func (*title) fromMediaFolder(mediaFolder string) []string {
 	var titles []string
 
 	eTitles, err := filepath.Glob(filepath.Join(mediaFolder, "/*"))
@@ -86,7 +86,7 @@ func (Title *title) fromMediaFolder(mediaFolder string) []string {
 	return titles
 }
 
-func (Title *title) readTitle(titlePath string) {
+func (t *title) readTitle(titlePath string) {
 
 	var isChapter = regexp.MustCompile(`(?im)\.(mp3|m4a|m4b)$`)
 	var isCover = regexp.MustCompile(`(?im)\.(jpg|jpeg|png)$`)
@@ -106,15 +106,15 @@ func (Title *title) readTitle(titlePath string) {
 				chapters = append(chapters, filepath.ToSlash(path))
 				log.Println("visited: ", path)
 			} else if isCover.MatchString(path) {
-				Title.CoverPath = path
-				log.Println("cover found: ", Title.CoverPath)
+				t.CoverPath = path
+				log.Println("cover found: ", t.CoverPath)
 			}
 		}
 		return nil
 	})
 	check(err)
 
-	Title.Chapters = chapters
+	t.Chapters = chapters
 }
 
 func main() {
