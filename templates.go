@@ -4,33 +4,33 @@ const xmlTemplateBody = `<?xml version="1.0" ?>
 <?xml-stylesheet href="/feed.xsl" type="text/xsl"?>
 <rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:media="http://search.yahoo.com/mrss/" xmlns:creativeCommons="http://backend.userland.com/creativeCommonsRssModule" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
 	<channel>
-		<title><![CDATA[{{.Title.Name}}]]></title>
-		<link><![CDATA[http://{{.HostName}}/{{.Title.Path}}]]></link>
-		<atom:link rel="self" href="http://{{.HostName}}/{{.Title.Path}}" />
-		<description><![CDATA[{{.Title.Name}}]]></description>
+		<title><![CDATA[{{.Name}}]]></title>
+		<link><![CDATA[http://{{.HostName}}/{{.Path}}]]></link>
+		<atom:link rel="self" href="http://{{.HostName}}/{{.Path}}" />
+		<description><![CDATA[{{.Name}}]]></description>
 		<itunes:type>serial</itunes:type>
 		<itunes:author>AudioFeed</itunes:author>
-		<itunes:summary><![CDATA[{{.Title.Name}}]]></itunes:summary>
+		<itunes:summary><![CDATA[{{.Name}}]]></itunes:summary>
 		<itunes:owner>
 		<itunes:name>Audiofeed</itunes:name>
 		<itunes:email>af@af.com</itunes:email>
 		</itunes:owner>
 		<itunes:category text="AudioBooks" />
 
-		{{if .Title.CoverPath}}
-		<itunes:image href="http://{{.HostName}}/{{.Title.CoverPath}}" />
-		<media:thumbnail url="http://{{.HostName}}/{{.Title.CoverPath}}" />
+		{{if .CoverPath}}
+		<itunes:image href="http://{{.HostName}}/{{.CoverPath}}" />
+		<media:thumbnail url="http://{{.HostName}}/{{.CoverPath}}" />
 		<image>
-			<title>{{.Title.Name}}</title>
-			<url>http://{{.HostName}}/{{.Title.CoverPath}}</url>
-			<link>http://{{.HostName}}/{{.Title.Path}}</link>
+			<title>{{.Name}}</title>
+			<url>http://{{.HostName}}/{{.CoverPath}}</url>
+			<link>http://{{.HostName}}/{{.Path}}</link>
 		</image>
 		{{end}}
 
-		{{ $TitleName := .Title.Name }}
+		{{ $TitleName := .Name }}
 		{{ $HostName := .HostName }}
-		{{ $TitlePath := .Title.Path }}
-		{{ range $k, $v := .Title.Chapters }}
+		{{ $TitlePath := .Path }}
+		{{ range $k, $v := .Chapters }}
 		<item>
 			<title><![CDATA[{{$TitleName}}]]></title>
 			<itunes:episode><![CDATA[{{$k}}]]></itunes:episode>
