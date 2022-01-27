@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -13,31 +12,28 @@ import (
 
 	"github.com/go-pkgz/lgr"
 	"github.com/gorilla/mux"
+	"github.com/kennygrant/sanitize"
 )
 
 type feedServer struct {
 	HostName    string
 	MediaFolder string
 	Port        string
-	Logger
-	title
+	*lgr.Logger
 }
 
-func NewServer(l Logger) *feedServer {
-	s := &feedServer{}
-	s.Logger = l
-	return s
+func New(l *lgr.Logger) *feedServer {
+	return &feedServer{
+		Logger: l,
+	}
 }
 
 type title struct {
+	Host      string
 	Name      string
 	Path      string
 	CoverPath string
 	Chapters  []string
-}
-
-type Logger interface {
-	Logf(format string, args ...interface{})
 }
 
 func (s *feedServer) index(w http.ResponseWriter, r *http.Request) {
@@ -56,15 +52,22 @@ func (s *feedServer) displayTitle(w http.ResponseWriter, r *http.Request) {
 	xmlTemplate.Parse(xmlTemplateBody)
 
 	params := mux.Vars(r)
-	s.HostName = r.Host
-	s.Name = params["name"] // filter somehow?
-	s.Path = filepath.ToSlash(filepath.Join("title", s.Name))
+	titleName := sanitize.BaseName(params["name"])
 
-	s.Logf("INFO Reading title '%s'", s.Name)
-	s.readTitle(filepath.Join(s.MediaFolder, s.Name))
+	s.Logf("INFO Reading title '%s'", titleName)
 
+	сhapters, coverPath, err := s.readTitle(filepath.Join(s.MediaFolder, titleName))
+	if err != nil {
+		s.Logf("ERROR reading title: %s", err.Error())
+	}
 	w.Header().Add("Content-Type", "text/xml; charset=utf-8")
-	xmlTemplate.Execute(w, s)
+	xmlTemplate.Execute(w, title{
+		r.Host,
+		titleName,
+		filepath.ToSlash(filepath.Join("title", titleName)),
+		coverPath,
+		сhapters,
+	})
 }
 
 func (*feedServer) info(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +87,7 @@ func (s *feedServer) readCmdParams() {
 	flag.Parse()
 }
 
-func (*title) fromMediaFolder(mediaFolder string) ([]string, error) {
+func (*feedServer) fromMediaFolder(mediaFolder string) ([]string, error) {
 	var titles []string
 
 	eTitles, err := filepath.Glob(filepath.Join(mediaFolder, "/*"))
@@ -99,16 +102,14 @@ func (*title) fromMediaFolder(mediaFolder string) ([]string, error) {
 	return titles, nil
 }
 
-func (t *title) readTitle(titlePath string) error {
+func (t *feedServer) readTitle(titlePath string) (chapters []string, coverPath string, err error) {
 
 	var isChapter = regexp.MustCompile(`(?im)\.(mp3|m4a|m4b)$`)
 	var isCover = regexp.MustCompile(`(?im)\.(jpg|jpeg|png)$`)
 
-	var chapters []string
-
-	_, err := os.ReadDir(titlePath)
+	_, err = os.ReadDir(titlePath)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 
 	err = filepath.WalkDir(titlePath, func(path string, entry fs.DirEntry, err error) error {
@@ -119,27 +120,23 @@ func (t *title) readTitle(titlePath string) error {
 		if !entry.IsDir() {
 			if isChapter.MatchString(path) {
 				chapters = append(chapters, filepath.ToSlash(path))
-				log.Println("visited: ", path)
 			} else if isCover.MatchString(path) {
-				t.CoverPath = path
-				log.Println("cover found: ", t.CoverPath)
+				coverPath = path
 			}
 		}
 		return nil
 	})
 
 	if err != nil {
-		return err
+		return nil, "", err
 	}
-
-	t.Chapters = chapters
-	return nil
+	return
 }
 
 func main() {
-	l := lgr.New(lgr.Format(lgr.FullDebug))
 
-	FeedServer := NewServer(l)
+	l := lgr.New(lgr.Format(lgr.FullDebug))
+	FeedServer := New(l)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/index", FeedServer.index).Methods("GET")
