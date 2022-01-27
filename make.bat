@@ -4,8 +4,8 @@ go build -v
 ::powershell -Command "Invoke-WebRequest http://www.archive.org/download/worldswithinworlds_v1-3_1904_librivox/worldswithinworlds_01_asimov_128kb.mp3 -OutFile \"audio\Worlds Within Worlds. The Story of Nuclear Energy by Isaac Asimov\worldswithinworlds_01_asimov_128kb.mp3\""
 ::powershell -Command "Invoke-WebRequest http://www.archive.org/download/worldswithinworlds_v1-3_1904_librivox/worldswithinworlds_02_asimov_128kb.mp3 -OutFile \"audio\Worlds Within Worlds. The Story of Nuclear Energy by Isaac Asimov\worldswithinworlds_02_asimov_128kb.mp3\""
 ::powershell -Command "Invoke-WebRequest https://archive.org/download/worldswithinworlds_v1-3_1904_librivox/storynuclearenergy_1904.jpg -OutFile \"audio\Worlds Within Worlds. The Story of Nuclear Energy by Isaac Asimov\storynuclearenergy_1904.jpg\""
-IF %1==demo GOTO :DEMO
-IF %1==run GOTO :RUN
+IF "%1"=="demo" GOTO :DEMO
+IF "%1"=="run" GOTO :RUN
 GOTO :END
 
 :DEMO
