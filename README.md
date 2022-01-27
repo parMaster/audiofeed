@@ -1,5 +1,7 @@
 # Audiofeed
 
+[![Go](https://github.com/parMaster/audiofeed/actions/workflows/go.yml/badge.svg)](https://github.com/parMaster/audiofeed/actions/workflows/go.yml)
+
 ## Demo
 To build a demo app, simply run
 
