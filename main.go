@@ -59,6 +59,8 @@ func (s *feedServer) displayTitle(w http.ResponseWriter, r *http.Request) {
 	сhapters, coverPath, err := s.readTitle(filepath.Join(s.MediaFolder, titleName))
 	if err != nil {
 		s.Logf("ERROR reading title: %s", err.Error())
+		http.Error(w, "Error reading title", http.StatusBadRequest)
+		return
 	}
 	w.Header().Add("Content-Type", "text/xml; charset=utf-8")
 	xmlTemplate.Execute(w, title{
