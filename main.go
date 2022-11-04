@@ -1,14 +1,19 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io/fs"
+	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"regexp"
+	"syscall"
 	"text/template"
+	"time"
 
 	"github.com/go-pkgz/lgr"
 	"github.com/gorilla/mux"
@@ -19,13 +24,10 @@ type feedServer struct {
 	HostName    string
 	MediaFolder string
 	Port        string
-	*lgr.Logger
 }
 
-func New(l *lgr.Logger) *feedServer {
-	return &feedServer{
-		Logger: l,
-	}
+func New() *feedServer {
+	return &feedServer{}
 }
 
 type title struct {
@@ -42,7 +44,7 @@ func (s *feedServer) index(w http.ResponseWriter, r *http.Request) {
 
 	titles, err := s.fromMediaFolder(s.MediaFolder)
 	if err != nil {
-		s.Logf("WARNING Reading folder error: %s", err.Error())
+		log.Printf("[WARN] Reading folder error: %s", err.Error())
 	}
 	titlesTemplate.Execute(w, titles)
 }
@@ -54,11 +56,11 @@ func (s *feedServer) displayTitle(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	titleName := sanitize.BaseName(params["name"])
 
-	s.Logf("INFO Reading title '%s'", titleName)
+	log.Printf("[INFO] Reading title '%s'", titleName)
 
 	сhapters, coverPath, err := s.readTitle(filepath.Join(s.MediaFolder, titleName))
 	if err != nil {
-		s.Logf("ERROR reading title: %s", err.Error())
+		log.Printf("[ERROR] reading title: %s", err.Error())
 		http.Error(w, "Error reading title", http.StatusBadRequest)
 		return
 	}
@@ -81,12 +83,6 @@ func (*feedServer) stylesheet(w http.ResponseWriter, r *http.Request) {
 	if b, err := os.ReadFile("feed.xsl"); err == nil {
 		w.Write([]byte(b))
 	}
-}
-
-func (s *feedServer) readCmdParams() {
-	flag.StringVar(&s.Port, "port", "8080", "Server port")
-	flag.StringVar(&s.MediaFolder, "folder", "audio", "Name of a folder with media")
-	flag.Parse()
 }
 
 func (*feedServer) fromMediaFolder(mediaFolder string) ([]string, error) {
@@ -135,23 +131,66 @@ func (t *feedServer) readTitle(titlePath string) (chapters []string, coverPath s
 	return
 }
 
+func (s *feedServer) Run(ctx context.Context) error {
+	r := mux.NewRouter()
+	r.HandleFunc("/index", s.index).Methods("GET")
+	r.HandleFunc("/info", s.info).Methods("GET")
+	r.HandleFunc("/feed.xsl", s.stylesheet).Methods("GET")
+	r.HandleFunc("/title/{name}", s.displayTitle).Methods("GET")
+	fs := http.StripPrefix("/"+s.MediaFolder+"/", http.FileServer(http.Dir("./"+s.MediaFolder+"/")))
+	r.PathPrefix("/" + s.MediaFolder + "/").Handler(fs)
+
+	httpServer := &http.Server{
+		Addr:              ":" + s.Port,
+		Handler:           r,
+		ReadHeaderTimeout: time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       time.Second,
+		ErrorLog:          lgr.ToStdLogger(lgr.Default(), "WARN"),
+	}
+	log.Printf("Listening: %s", s.Port)
+
+	go func() {
+		<-ctx.Done()
+		if httpServer != nil {
+			if err := httpServer.Close(); err != nil {
+				log.Printf("[ERROR] failed to close http server, %v", err)
+			}
+		}
+	}()
+
+	return httpServer.ListenAndServe()
+}
+
 func main() {
 
-	l := lgr.New(lgr.Format(lgr.FullDebug))
-	FeedServer := New(l)
+	logOpts := []lgr.Option{lgr.Msec, lgr.LevelBraces, lgr.StackTraceOnError}
+	// logOpts := []lgr.Option{lgr.Debug, lgr.CallerFile, lgr.CallerFunc, lgr.Msec, lgr.LevelBraces, lgr.StackTraceOnError}
+	lgr.SetupStdLogger(logOpts...)
+	lgr.Setup(logOpts...)
 
-	r := mux.NewRouter()
-	r.HandleFunc("/index", FeedServer.index).Methods("GET")
-	r.HandleFunc("/info", FeedServer.info).Methods("GET")
-	r.HandleFunc("/feed.xsl", FeedServer.stylesheet).Methods("GET")
-	r.HandleFunc("/title/{name}", FeedServer.displayTitle).Methods("GET")
+	FeedServer := New()
 
-	FeedServer.readCmdParams()
+	flag.StringVar(&FeedServer.Port, "port", "8080", "Server port")
+	flag.StringVar(&FeedServer.MediaFolder, "folder", "audio", "Name of a folder with media")
+	flag.Parse()
 
-	http.Handle("/", r)
-	http.Handle("/"+FeedServer.MediaFolder+"/", http.StripPrefix("/"+FeedServer.MediaFolder+"/", http.FileServer(http.Dir(FeedServer.MediaFolder))))
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		if x := recover(); x != nil {
+			log.Printf("[WARN] run time panic:\n%v", x)
+			panic(x)
+		}
 
-	l.Logf("Listening: %s", FeedServer.Port)
-	err := http.ListenAndServe(":"+FeedServer.Port, nil)
-	l.Logf("ERROR ListenAndServe: %s", err.Error())
+		// catch signal and invoke graceful termination
+		stop := make(chan os.Signal, 1)
+		signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+		<-stop
+		log.Printf("[WARN] interrupt signal")
+		cancel()
+	}()
+
+	if err := FeedServer.Run(ctx); err != nil && err.Error() != "http: Server closed" {
+		log.Printf("[ERROR] %s", err)
+	}
 }
