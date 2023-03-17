@@ -1,14 +1,12 @@
-.PHONY: build
+.PHONY: build,run,demo,stage
 build: 
 	go get audiofeed
 	go build -v
 
-.PHONY: run
 run: 
 	go build -v
 	./audiofeed
 
-.PHONY: demo
 demo: 
 	go get audiofeed
 	go build -v
@@ -26,7 +24,6 @@ demo:
 	curl http://archive.org/download/LibrivoxCdCoverArt19/Alices_Adventures_in_Wonderland5.jpg -L > audio/Alice-Adventures-in-Wonderland-abridged-Lewis-Carroll/Alices_Adventures_in_Wonderland5.jpg
 	./audiofeed
 
-.PHONY: stage
 stage: 
 	rm ./audiofeed
 	go build -v 
