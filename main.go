@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -20,13 +21,22 @@ import (
 	"github.com/kennygrant/sanitize"
 )
 
+//go:embed web/feed.xml
+var feed_xml string
+
+//go:embed web/feed.xsl
+var feed_xsl string
+
+//go:embed web/titles.html
+var titles_html string
+
 type feedServer struct {
 	HostName    string
 	MediaFolder string
 	Port        string
 }
 
-func New() *feedServer {
+func NewFeedServer() *feedServer {
 	return &feedServer{}
 }
 
@@ -40,7 +50,7 @@ type title struct {
 
 func (s *feedServer) index(w http.ResponseWriter, r *http.Request) {
 	titlesTemplate := template.New("Title with chapters")
-	titlesTemplate.Parse(titlesTemplateBody)
+	titlesTemplate.Parse(titles_html)
 
 	titles, err := s.fromMediaFolder(s.MediaFolder)
 	if err != nil {
@@ -51,7 +61,7 @@ func (s *feedServer) index(w http.ResponseWriter, r *http.Request) {
 
 func (s *feedServer) displayTitle(w http.ResponseWriter, r *http.Request) {
 	xmlTemplate := template.New("Title with chapters")
-	xmlTemplate.Parse(xmlTemplateBody)
+	xmlTemplate.Parse(feed_xml)
 
 	params := mux.Vars(r)
 	titleName := sanitize.BaseName(params["name"])
@@ -80,9 +90,7 @@ func (*feedServer) info(w http.ResponseWriter, r *http.Request) {
 }
 
 func (*feedServer) stylesheet(w http.ResponseWriter, r *http.Request) {
-	if b, err := os.ReadFile("feed.xsl"); err == nil {
-		w.Write([]byte(b))
-	}
+	w.Write([]byte(feed_xsl))
 }
 
 func (*feedServer) fromMediaFolder(mediaFolder string) ([]string, error) {
@@ -163,17 +171,19 @@ func (s *feedServer) Run(ctx context.Context) error {
 }
 
 func main() {
+	feedServer := NewFeedServer()
+
+	var dbg = flag.Bool("dbg", false, "Debug mode")
+	flag.StringVar(&feedServer.Port, "port", "8080", "Server port")
+	flag.StringVar(&feedServer.MediaFolder, "folder", "audio", "Name of a folder with media")
+	flag.Parse()
 
 	logOpts := []lgr.Option{lgr.Msec, lgr.LevelBraces, lgr.StackTraceOnError}
-	// logOpts := []lgr.Option{lgr.Debug, lgr.CallerFile, lgr.CallerFunc, lgr.Msec, lgr.LevelBraces, lgr.StackTraceOnError}
+	if *dbg {
+		logOpts = append(logOpts, lgr.Debug, lgr.CallerFile, lgr.CallerFunc)
+	}
 	lgr.SetupStdLogger(logOpts...)
 	lgr.Setup(logOpts...)
-
-	FeedServer := New()
-
-	flag.StringVar(&FeedServer.Port, "port", "8080", "Server port")
-	flag.StringVar(&FeedServer.MediaFolder, "folder", "audio", "Name of a folder with media")
-	flag.Parse()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -190,7 +200,7 @@ func main() {
 		cancel()
 	}()
 
-	if err := FeedServer.Run(ctx); err != nil && err.Error() != "http: Server closed" {
+	if err := feedServer.Run(ctx); err != nil && err.Error() != "http: Server closed" {
 		log.Printf("[ERROR] %s", err)
 	}
 }

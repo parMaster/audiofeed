@@ -1,0 +1,9 @@
+<html>
+<body>
+<h2>Audiobook feed</h3>
+<h3>Titles available:</h4>
+{{ range $k, $v := . }}
+<li><a href="/title/{{$v}}">{{$v}}</a></li>
+{{ end }} 
+</body>
+</html>
