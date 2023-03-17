@@ -1,0 +1,13 @@
+# github.com/go-pkgz/lgr v0.10.4
+## explicit; go 1.15
+github.com/go-pkgz/lgr
+# github.com/gorilla/mux v1.8.0
+## explicit; go 1.12
+github.com/gorilla/mux
+# github.com/kennygrant/sanitize v1.2.4
+## explicit
+github.com/kennygrant/sanitize
+# golang.org/x/net v0.1.0
+## explicit; go 1.17
+golang.org/x/net/html
+golang.org/x/net/html/atom
