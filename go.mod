@@ -8,4 +8,4 @@ require (
 	github.com/kennygrant/sanitize v1.2.4
 )
 
-require golang.org/x/net v0.1.0 // indirect
+require golang.org/x/net v0.7.0 // indirect
