@@ -18,7 +18,6 @@ import (
 
 	"github.com/go-pkgz/lgr"
 	"github.com/gorilla/mux"
-	"github.com/kennygrant/sanitize"
 )
 
 //go:embed web/feed.xml
@@ -64,7 +63,7 @@ func (s *feedServer) displayTitle(w http.ResponseWriter, r *http.Request) {
 	xmlTemplate.Parse(feed_xml)
 
 	params := mux.Vars(r)
-	titleName := sanitize.BaseName(params["name"])
+	titleName := params["name"]
 
 	log.Printf("[INFO] Reading title '%s'", titleName)
 
@@ -178,7 +177,7 @@ func main() {
 	flag.StringVar(&feedServer.MediaFolder, "folder", "audio", "Name of a folder with media")
 	flag.Parse()
 
-	logOpts := []lgr.Option{lgr.Msec, lgr.LevelBraces, lgr.StackTraceOnError}
+	logOpts := []lgr.Option{lgr.LevelBraces}
 	if *dbg {
 		logOpts = append(logOpts, lgr.Debug, lgr.CallerFile, lgr.CallerFunc)
 	}
