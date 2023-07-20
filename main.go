@@ -125,6 +125,10 @@ func (*feedServer) fromMediaFolder(mediaFolder string) ([]string, error) {
 
 	for _, t := range eTitles {
 		title := filepath.Base(t)
+		// skip .gitignore and other files
+		if strings.HasPrefix(title, ".") {
+			continue
+		}
 		titles = append(titles, title)
 	}
 	return titles, nil
