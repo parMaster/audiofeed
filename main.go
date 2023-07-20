@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -12,12 +13,13 @@ import (
 	"os/signal"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"syscall"
 	"text/template"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-pkgz/lgr"
-	"github.com/gorilla/mux"
 )
 
 //go:embed web/feed.xml
@@ -33,6 +35,7 @@ type feedServer struct {
 	HostName    string
 	MediaFolder string
 	Port        string
+	AccessCode  string
 }
 
 func NewFeedServer() *feedServer {
@@ -48,6 +51,16 @@ type title struct {
 }
 
 func (s *feedServer) index(w http.ResponseWriter, r *http.Request) {
+
+	// if access code is set, check it
+	if s.AccessCode != "" {
+		code := chi.URLParam(r, "code")
+		if code != s.AccessCode {
+			http.Error(w, "Access denied", http.StatusForbidden)
+			return
+		}
+	}
+
 	titlesTemplate := template.New("Title with chapters")
 	titlesTemplate.Parse(titles_html)
 
@@ -62,9 +75,7 @@ func (s *feedServer) displayTitle(w http.ResponseWriter, r *http.Request) {
 	xmlTemplate := template.New("Title with chapters")
 	xmlTemplate.Parse(feed_xml)
 
-	params := mux.Vars(r)
-	titleName := params["name"]
-
+	titleName := chi.URLParam(r, "title")
 	log.Printf("[INFO] Reading title '%s'", titleName)
 
 	сhapters, coverPath, err := s.readTitle(filepath.Join(s.MediaFolder, titleName))
@@ -84,11 +95,23 @@ func (s *feedServer) displayTitle(w http.ResponseWriter, r *http.Request) {
 }
 
 func (*feedServer) info(w http.ResponseWriter, r *http.Request) {
-	b := fmt.Sprintf("%v", r)
-	w.Write([]byte(b))
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"Host":            r.Host,
+		"RequestURI":      r.RequestURI,
+		"RemoteAddr":      r.RemoteAddr,
+		"date":            fmt.Sprintf("%s", time.Now()),
+		"UserAgent":       r.UserAgent(),
+		"Accept-Encoding": r.Header.Get("Accept-Encoding"),
+		"Accept-Language": r.Header.Get("Accept-Language"),
+		"Connection":      r.Header.Get("Connection"),
+		"Accept":          r.Header.Get("Accept"),
+		"Accept-Charset":  r.Header.Get("Accept-Charset"),
+	})
 }
 
 func (*feedServer) stylesheet(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/xsl; charset=utf-8")
 	w.Write([]byte(feed_xsl))
 }
 
@@ -139,13 +162,19 @@ func (t *feedServer) readTitle(titlePath string) (chapters []string, coverPath s
 }
 
 func (s *feedServer) Run(ctx context.Context) error {
-	r := mux.NewRouter()
-	r.HandleFunc("/index", s.index).Methods("GET")
-	r.HandleFunc("/info", s.info).Methods("GET")
-	r.HandleFunc("/feed.xsl", s.stylesheet).Methods("GET")
-	r.HandleFunc("/title/{name}", s.displayTitle).Methods("GET")
-	fs := http.StripPrefix("/"+s.MediaFolder+"/", http.FileServer(http.Dir("./"+s.MediaFolder+"/")))
-	r.PathPrefix("/" + s.MediaFolder + "/").Handler(fs)
+	r := chi.NewRouter()
+
+	r.Route("/index", func(r chi.Router) {
+		r.Get("/{code}", s.index)
+		r.Get("/", s.index)
+	})
+
+	r.Get("/info", s.info)
+	r.Get("/feed.xsl", s.stylesheet)
+	r.Get("/title/{title}", s.displayTitle)
+
+	fs := http.FileServer(http.Dir("./" + s.MediaFolder))
+	r.Handle("/"+s.MediaFolder+"/*", http.StripPrefix("/"+s.MediaFolder, filesOnly(fs)))
 
 	httpServer := &http.Server{
 		Addr:              ":" + s.Port,
@@ -155,7 +184,7 @@ func (s *feedServer) Run(ctx context.Context) error {
 		IdleTimeout:       time.Second,
 		ErrorLog:          lgr.ToStdLogger(lgr.Default(), "WARN"),
 	}
-	log.Printf("Listening: %s", s.Port)
+	log.Printf("[INFO] Listening: %s", s.Port)
 
 	go func() {
 		<-ctx.Done()
@@ -169,12 +198,24 @@ func (s *feedServer) Run(ctx context.Context) error {
 	return httpServer.ListenAndServe()
 }
 
+func filesOnly(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/") {
+			http.NotFound(w, r)
+			return
+		}
+		log.Printf("[INFO] %s (%s)", r.URL.Path, r.Header.Get("X-Real-Ip"))
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	feedServer := NewFeedServer()
 
 	var dbg = flag.Bool("dbg", false, "Debug mode")
 	flag.StringVar(&feedServer.Port, "port", "8080", "Server port")
-	flag.StringVar(&feedServer.MediaFolder, "folder", "audio", "Name of a folder with media")
+	flag.StringVar(&feedServer.MediaFolder, "folder", "audio", "Name of a folder with media, ./audio by default")
+	flag.StringVar(&feedServer.AccessCode, "code", "", "(optional) Access Code, if set, will be required for access to /index/{code} to list titles")
 	flag.Parse()
 
 	logOpts := []lgr.Option{lgr.LevelBraces}
