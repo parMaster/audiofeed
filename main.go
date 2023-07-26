@@ -185,7 +185,7 @@ func (s *feedServer) Run(ctx context.Context) error {
 	r.Get("/title/{title}", s.displayTitle)
 
 	fs := http.FileServer(http.Dir(s.MediaFolder))
-	r.Handle("/audio/*", filesOnly(fs))
+	r.Handle("/audio/*", removeAudioPrefix(filesOnly(fs)))
 
 	httpServer := &http.Server{
 		Addr:              ":" + s.Port,
@@ -216,12 +216,20 @@ func (s *feedServer) Run(ctx context.Context) error {
 	return httpServer.ListenAndServe()
 }
 
+// middlewar to allow only files, no folders listing
 func filesOnly(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/") {
 			http.NotFound(w, r)
 			return
 		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// middlewar to remove '/audio' prefix from path
+func removeAudioPrefix(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// remove '/audio' prefix from path
 		r.URL.Path = r.URL.Path[6:]
 		log.Printf("[INFO] %s (%s)", r.URL.Path, r.Header.Get("X-Real-Ip"))
