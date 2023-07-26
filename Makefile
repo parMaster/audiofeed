@@ -10,7 +10,7 @@ run:
 demo: 
 	go get audiofeed
 	go build -v
-	mkdir "audio"
+	mkdir "audio" || true
 	mkdir "audio/Taras-Shevchenko"
 	mkdir "audio/Taras-Shevchenko/Kateryna"
 	mkdir "audio/Taras-Shevchenko/Prychynna"
