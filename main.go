@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
@@ -84,6 +83,12 @@ func (s *feedServer) displayTitle(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error reading title", http.StatusBadRequest)
 		return
 	}
+
+	for i, c := range сhapters {
+		// remove s.MediaFolder prefix from each chapter path
+		сhapters[i] = "audio/" + c[len(filepath.ToSlash(s.MediaFolder))+1:]
+	}
+
 	w.Header().Add("Content-Type", "text/xml; charset=utf-8")
 	xmlTemplate.Execute(w, title{
 		r.Host,
@@ -100,7 +105,7 @@ func (*feedServer) info(w http.ResponseWriter, r *http.Request) {
 		"Host":            r.Host,
 		"RequestURI":      r.RequestURI,
 		"RemoteAddr":      r.RemoteAddr,
-		"date":            fmt.Sprintf("%s", time.Now()),
+		"date":            time.Now().String(),
 		"UserAgent":       r.UserAgent(),
 		"Accept-Encoding": r.Header.Get("Accept-Encoding"),
 		"Accept-Language": r.Header.Get("Accept-Language"),
@@ -166,8 +171,10 @@ func (t *feedServer) readTitle(titlePath string) (chapters []string, coverPath s
 }
 
 func (s *feedServer) Run(ctx context.Context) error {
-	r := chi.NewRouter()
+	// convert to absolute path
+	s.MediaFolder, _ = filepath.Abs(s.MediaFolder)
 
+	r := chi.NewRouter()
 	r.Route("/index", func(r chi.Router) {
 		r.Get("/{code}", s.index)
 		r.Get("/", s.index)
@@ -177,8 +184,8 @@ func (s *feedServer) Run(ctx context.Context) error {
 	r.Get("/feed.xsl", s.stylesheet)
 	r.Get("/title/{title}", s.displayTitle)
 
-	fs := http.FileServer(http.Dir("./" + s.MediaFolder))
-	r.Handle("/"+s.MediaFolder+"/*", http.StripPrefix("/"+s.MediaFolder, filesOnly(fs)))
+	fs := http.FileServer(http.Dir(s.MediaFolder))
+	r.Handle("/audio/*", filesOnly(fs))
 
 	httpServer := &http.Server{
 		Addr:              ":" + s.Port,
@@ -215,6 +222,8 @@ func filesOnly(next http.Handler) http.Handler {
 			http.NotFound(w, r)
 			return
 		}
+		// remove '/audio' prefix from path
+		r.URL.Path = r.URL.Path[6:]
 		log.Printf("[INFO] %s (%s)", r.URL.Path, r.Header.Get("X-Real-Ip"))
 		next.ServeHTTP(w, r)
 	})
@@ -225,7 +234,7 @@ func main() {
 
 	var dbg = flag.Bool("dbg", false, "Debug mode")
 	flag.StringVar(&feedServer.Port, "port", "8080", "Server port")
-	flag.StringVar(&feedServer.MediaFolder, "folder", "audio", "Name of a folder with media, ./audio by default")
+	flag.StringVar(&feedServer.MediaFolder, "folder", "./audio", "Name of a folder with media, ./audio by default")
 	flag.StringVar(&feedServer.AccessCode, "code", "", "(optional) Access Code, if set, will be required for access to /index/{code} to list titles")
 	flag.Parse()
 
@@ -247,7 +256,7 @@ func main() {
 		stop := make(chan os.Signal, 1)
 		signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 		<-stop
-		log.Printf("[WARN] interrupt signal")
+		log.Printf("[INFO] shutting down")
 		cancel()
 	}()
 
