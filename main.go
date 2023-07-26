@@ -190,6 +190,13 @@ func (s *feedServer) Run(ctx context.Context) error {
 	}
 	log.Printf("[INFO] Listening: %s", s.Port)
 
+	titles, err := s.fromMediaFolder(s.MediaFolder)
+	if err != nil {
+		log.Printf("[WARN] Reading folder error: %s", err.Error())
+	}
+
+	log.Printf("[INFO] Found: %d titled in '%s' folder", len(titles), s.MediaFolder)
+
 	go func() {
 		<-ctx.Done()
 		if httpServer != nil {
