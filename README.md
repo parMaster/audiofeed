@@ -21,14 +21,14 @@ Visit http://localhost:8080/index to see titles list
 Demo server is also available at http://audiofeed_demo.cdns.com.ua:8983/index
 
 ## Command line arguments
-- `--folder=(string)` - path to folder with audiobooks (default "audio")
+- `--folder=(string)` - path to folder with audiobooks (default "./audio"). Absolute or relative path allowed.
 - `--code=(string)` - access code (optional) - if set, /index/{code} should be used instead of /index to access titles list, (default "")
-- `--port=(int)` - port to listen on (default 8080)
+- `--port=(int)` - port to listen to (default 8080)
 - `--dbg` - enable debug mode (default false)
 - `--help` - show help
 
 ## Usage
-- Put your audiobook folder into `audio` folder
+- Put your audiobook folder into `audio` folder. You can use `make demo` to download some public domain content to `audio` folder
 - Run `audiofeed` with your arguments or simply `make run`
 - Visit `http://localhost:8080/index` to see titles list
 - Copy XML feed link and add it to your podcast app
