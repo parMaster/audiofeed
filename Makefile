@@ -1,4 +1,4 @@
-.PHONY: build,run,demo,stage
+.PHONY: build,run,demo,stage,release
 build: 
 	go get audiofeed
 	go build -v
@@ -28,3 +28,8 @@ stage:
 	rm ./audiofeed
 	go build -v 
 	cp ./audiofeed /var/www/af.cdns/
+
+release:
+	@echo release to .bin
+	goreleaser --snapshot --skip-publish --clean
+	ls -l .bin
