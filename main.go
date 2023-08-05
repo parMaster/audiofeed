@@ -207,7 +207,7 @@ func (s *feedServer) Run(ctx context.Context) error {
 	go func() {
 		<-ctx.Done()
 		if httpServer != nil {
-			if err := httpServer.Close(); err != nil {
+			if err := httpServer.Shutdown(ctx); err != nil {
 				log.Printf("[ERROR] failed to close http server, %v", err)
 			}
 		}
