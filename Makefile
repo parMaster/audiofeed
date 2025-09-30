@@ -29,7 +29,10 @@ stage:
 	go build -v 
 	cp ./audiofeed /var/www/af.cdns/
 
+test: 
+	go test -v ./...
+
 release:
 	@echo release to .bin
-	goreleaser --snapshot --skip-publish --clean
+	goreleaser --snapshot --clean
 	ls -l .bin
