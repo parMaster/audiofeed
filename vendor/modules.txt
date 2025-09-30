@@ -1,6 +1,0 @@
-# github.com/go-chi/chi/v5 v5.0.10
-## explicit; go 1.14
-github.com/go-chi/chi/v5
-# github.com/go-pkgz/lgr v0.11.0
-## explicit; go 1.19
-github.com/go-pkgz/lgr

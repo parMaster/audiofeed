@@ -1,21 +1,21 @@
 .PHONY: build,run,demo,stage,release
+
+.DEFAULT_GOAL: build
+
 build: 
 	go get audiofeed
 	go build -v
 
-run: 
-	go build -v
+run: build
 	./audiofeed
 
 demo: 
 	go get audiofeed
 	go build -v
-	mkdir "audio" || true
-	mkdir "audio/Taras-Shevchenko"
-	mkdir "audio/Taras-Shevchenko/Kateryna"
-	mkdir "audio/Taras-Shevchenko/Prychynna"
-	mkdir "audio/Taras-Shevchenko/Zapovit"
-	mkdir "audio/Alice-Adventures-in-Wonderland-abridged-Lewis-Carroll"
+	mkdir -p "audio/Taras-Shevchenko/Kateryna"
+	mkdir -p "audio/Taras-Shevchenko/Prychynna"
+	mkdir -p "audio/Taras-Shevchenko/Zapovit"
+	mkdir -p "audio/Alice-Adventures-in-Wonderland-abridged-Lewis-Carroll"
 	curl http://www.archive.org/download/multilingual_poetry_012_0904/ukrainian_kateryna_shevchenko_olga.mp3 -L > audio/Taras-Shevchenko/Kateryna/kateryna.mp3
 	curl http://www.archive.org/download/multilingual_poetry_012_0904/ukrainian_prychynna_shevchenko_olga.mp3 -L > audio/Taras-Shevchenko/Prychynna/ukrainian_prychynna_shevchenko_olga.mp3
 	curl http://www.archive.org/download/multilingual_short_works_collection_012_1403_librivox/msw012_20_zapovit_shevchenko_sap_128kb.mp3 -L > audio/Taras-Shevchenko/Zapovit/msw012_20_zapovit_shevchenko_sap_128kb.mp3

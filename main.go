@@ -4,7 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
-	"flag"
+	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
@@ -17,8 +17,9 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/go-pkgz/lgr"
+	"github.com/go-pkgz/routegroup"
+	"github.com/jessevdk/go-flags"
 )
 
 //go:embed web/feed.xml
@@ -31,14 +32,11 @@ var feed_xsl string
 var titles_html string
 
 type feedServer struct {
-	HostName    string
-	MediaFolder string
-	Port        string
-	AccessCode  string
+	Options
 }
 
-func NewFeedServer() *feedServer {
-	return &feedServer{}
+func NewFeedServer(opts Options) *feedServer {
+	return &feedServer{Options: opts}
 }
 
 type title struct {
@@ -53,7 +51,7 @@ func (s *feedServer) index(w http.ResponseWriter, r *http.Request) {
 
 	// if access code is set, check it
 	if s.AccessCode != "" {
-		code := chi.URLParam(r, "code")
+		code := r.PathValue("code")
 		if code != s.AccessCode {
 			http.Error(w, "Access denied", http.StatusForbidden)
 			return
@@ -74,19 +72,22 @@ func (s *feedServer) displayTitle(w http.ResponseWriter, r *http.Request) {
 	xmlTemplate := template.New("Title with chapters")
 	xmlTemplate.Parse(feed_xml)
 
-	titleName := chi.URLParam(r, "title")
+	titleName := r.PathValue("title")
 	log.Printf("[INFO] Reading title '%s'", titleName)
 
 	сhapters, coverPath, err := s.readTitle(filepath.Join(s.MediaFolder, titleName))
 	if err != nil {
 		log.Printf("[ERROR] reading title: %s", err.Error())
-		http.Error(w, "Error reading title", http.StatusBadRequest)
+		http.Error(w, "Error reading title", http.StatusInternalServerError)
 		return
 	}
 
 	for i, c := range сhapters {
 		// remove s.MediaFolder prefix from each chapter path
-		сhapters[i] = "audio/" + c[len(filepath.ToSlash(s.MediaFolder))+1:]
+		сhapters[i], _ = strings.CutPrefix(c, filepath.ToSlash(s.MediaFolder)+"/")
+		// add "audio/" prefix to each chapter path for http access
+		сhapters[i] = "audio/" + сhapters[i]
+		log.Printf("[DEBUG] file: %s", сhapters[i])
 	}
 
 	w.Header().Add("Content-Type", "text/xml; charset=utf-8")
@@ -130,7 +131,7 @@ func (*feedServer) fromMediaFolder(mediaFolder string) ([]string, error) {
 
 	for _, t := range eTitles {
 		title := filepath.Base(t)
-		// skip .gitignore and other files
+		// skip .gitignore and other dot-files
 		if strings.HasPrefix(title, ".") {
 			continue
 		}
@@ -171,31 +172,28 @@ func (t *feedServer) readTitle(titlePath string) (chapters []string, coverPath s
 }
 
 func (s *feedServer) Run(ctx context.Context) error {
-	// convert to absolute path
 	s.MediaFolder, _ = filepath.Abs(s.MediaFolder)
 
-	r := chi.NewRouter()
-	r.Route("/index", func(r chi.Router) {
-		r.Get("/{code}", s.index)
-		r.Get("/", s.index)
-	})
+	mux := http.NewServeMux()
+	router := routegroup.New(mux)
 
-	r.Get("/info", s.info)
-	r.Get("/feed.xsl", s.stylesheet)
-	r.Get("/title/{title}", s.displayTitle)
+	router.HandleFunc("/index", s.index)
+	router.HandleFunc("/index/{code}", s.index)
+	router.HandleFunc("/info", s.info)
+	router.HandleFunc("/feed.xsl", s.stylesheet)
+	router.HandleFunc("/title/{title}", s.displayTitle)
 
-	fs := http.FileServer(http.Dir(s.MediaFolder))
-	r.Handle("/audio/*", removeAudioPrefix(filesOnly(fs)))
+	router.With(filesOnly).HandleFiles("/audio", http.Dir(s.MediaFolder))
 
 	httpServer := &http.Server{
-		Addr:              ":" + s.Port,
-		Handler:           r,
+		Addr:              fmt.Sprintf(":%d", s.Port),
+		Handler:           router,
 		ReadHeaderTimeout: time.Second,
 		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       time.Second,
 		ErrorLog:          lgr.ToStdLogger(lgr.Default(), "WARN"),
 	}
-	log.Printf("[INFO] Listening: %s", s.Port)
+	log.Printf("[INFO] Listening: %d", s.Port)
 
 	titles, err := s.fromMediaFolder(s.MediaFolder)
 	if err != nil {
@@ -216,7 +214,7 @@ func (s *feedServer) Run(ctx context.Context) error {
 	return httpServer.ListenAndServe()
 }
 
-// middlewar to allow only files, no folders listing
+// middleware to allow only files, no folders listing
 func filesOnly(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/") {
@@ -227,31 +225,40 @@ func filesOnly(next http.Handler) http.Handler {
 	})
 }
 
-// middlewar to remove '/audio' prefix from path
-func removeAudioPrefix(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// remove '/audio' prefix from path
-		r.URL.Path = r.URL.Path[6:]
-		log.Printf("[INFO] %s (%s)", r.URL.Path, r.Header.Get("X-Real-Ip"))
-		next.ServeHTTP(w, r)
-	})
+type Options struct {
+	Dbg         bool   `long:"dbg" description:"Debug mode"`
+	HostName    string `long:"host" default:"localhost" description:"Server host name"`
+	Port        uint   `long:"port" default:"8080" description:"Server port"`
+	MediaFolder string `long:"folder" default:"./audio" description:"Name of a folder with media, ./audio by default"`
+	AccessCode  string `long:"code" description:"(optional) Access Code, if set, will be required for access to /index/{code} to list titles"`
 }
 
 func main() {
-	feedServer := NewFeedServer()
+	var cfg Options
 
-	var dbg = flag.Bool("dbg", false, "Debug mode")
-	flag.StringVar(&feedServer.Port, "port", "8080", "Server port")
-	flag.StringVar(&feedServer.MediaFolder, "folder", "./audio", "Name of a folder with media, ./audio by default")
-	flag.StringVar(&feedServer.AccessCode, "code", "", "(optional) Access Code, if set, will be required for access to /index/{code} to list titles")
-	flag.Parse()
+	p := flags.NewParser(&cfg, flags.PassDoubleDash|flags.HelpFlag)
+	if _, err := p.Parse(); err != nil {
+		if err.(*flags.Error).Type != flags.ErrHelp {
+			fmt.Printf("%v\n", err)
+			os.Exit(1)
+		}
+		p.WriteHelp(os.Stderr)
+		os.Exit(2)
+	}
 
-	logOpts := []lgr.Option{lgr.LevelBraces}
-	if *dbg {
+	feedServer := NewFeedServer(cfg)
+
+	logOpts := []lgr.Option{
+		lgr.LevelBraces,
+		lgr.StackTraceOnError,
+	}
+	if feedServer.AccessCode != "" {
+		logOpts = append(logOpts, lgr.Secret(feedServer.AccessCode))
+	}
+	if feedServer.Dbg {
 		logOpts = append(logOpts, lgr.Debug, lgr.CallerFile, lgr.CallerFunc)
 	}
 	lgr.SetupStdLogger(logOpts...)
-	lgr.Setup(logOpts...)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
