@@ -11,15 +11,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
 
-    - name: Set up Go
-      uses: actions/setup-go@v2
+    - name: Checkout
+      uses: actions/checkout@v5.0.0
+
+    - name: Setup Go environment
+      uses: actions/setup-go@v6.0.0
       with:
-        go-version: 1.17
+        go-version: 1.24
+
+    - name: Get dependencies
+      run: go mod vendor
 
     - name: Build
-      run: go get audiofeed && go build -v ./...
-
-    - name: Test
-      run: go test -v ./...
+      run: make
